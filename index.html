@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Gemini Frontend for Docs Editing</title>
+    <title>Gemini Frontend</title>
     <style>
     /* Clean, minimal styling */
     body {
@@ -11,14 +11,14 @@
       background-color: #f9f9f9;
     }
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: auto;
       background: #fff;
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    h1 {
+    h1, h2, h3 {
       text-align: center;
     }
     .form-group {
@@ -48,6 +48,7 @@
       border-radius: 4px;
       cursor: pointer;
       margin-right: 10px;
+      margin-top: 5px;
     }
     button:hover {
       background-color: #357ae8;
@@ -62,6 +63,42 @@
       font-size: 0.9em;
       color: #555;
       margin-top: 5px;
+    }
+    /* Styling for the drop zone */
+    #dropZone {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    #dropZone.hover {
+      background-color: #e8e8e8;
+    }
+    /* File queue list */
+    #fileQueue {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 10px;
+    }
+    #fileQueue li {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 5px;
+    }
+    /* Tabs for batch results */
+    #resultTabs button {
+      margin: 3px;
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #resultTabs button.active {
+      background: #4285f4;
+      color: #fff;
     }
   </style>
 </head>
@@ -80,50 +117,79 @@
         <label for="prompt">System Prompt</label>
         <div id="promptPresets">
             <!-- Default Summarize prompt -->
-            <button type="button" class="preset-btn" data-prompt="You are a summarizer and keyword generator for technical documentation. The summaries should be about 150 characters, and the keywords should be about 3-6 relevant keywords. Generate three versions of each response, with different wording and length.\n\nUse the abbreviated form of any product names you see in the article.\n\nBlacklist of words you can't use: via, e.g., i.e., please, etc., latter\n\n\nReturn in this format:\ndescription: SUMMARY_GOES_HERE\nkeywords: [KEYWORD, KEYWORD, KEYWORD]">
+            <button type="button" class="preset-btn" data-prompt="You are a summarizer and keyword generator for technical documentation. The summaries should be about 150 characters, and the keywords should be about 3-6 relevant keywords. Generate three versions of each response, with different wording and length.
+
+Use the abbreviated form of any product names you see in the article.
+
+Blacklist of words you can't use: via, e.g., i.e., please, etc., latter
+
+Return in this format:
+description: SUMMARY_GOES_HERE
+keywords: [KEYWORD, KEYWORD, KEYWORD]">
                 Summarize
             </button>
             <!-- Additional preset buttons -->
-            <button type="button" class="preset-btn" data-prompt="You are a highly skilled database developer and application developer. Identify any logical inconsistencies in this article.">
-                Logic Check
+            <button type="button" class="preset-btn" data-prompt="Preset prompt 2 text here">
+                Preset 2
             </button>
-            <button type="button" class="preset-btn" data-prompt="Custom prompt goes here.">
+            <button type="button" class="preset-btn" data-prompt="Preset prompt 3 text here">
                 Preset 3
             </button>
         </div>
         <textarea id="prompt" rows="6"></textarea>
     </div>
 
-    <!-- Article Input -->
+    <!-- Article Input (for single request) -->
     <div class="form-group">
         <label for="article">Article Text</label>
         <textarea id="article" rows="10" placeholder="Paste your article text here"></textarea>
     </div>
 
-    <!-- Submit Button -->
+    <!-- Submit Button for single request -->
     <div class="form-group">
         <button type="button" id="submitBtn">Submit</button>
     </div>
 
-    <!-- Response (Editable Output Box) -->
+    <!-- Response (Editable Output Box for single request) -->
     <div class="form-group">
-        <label for="editableOutput">Response</label>
-        <textarea id="editableOutput" rows="10" placeholder="Response appears here for editing."></textarea>
+        <label for="editableOutput">Response <span id="loadingIndicator" style="font-weight: normal; color: #888;"></span></label>
+        <textarea id="editableOutput" rows="10" placeholder="Response appears here"></textarea>
         <div class="counter">
             <span>Characters: <span id="outputCharCount">0</span></span>
             <button type="button" id="copyOutput">Copy</button>
         </div>
     </div>
+
+    <!-- Batch Processing Section -->
+    <div class="form-group">
+        <h2>Batch Processing</h2>
+        <div id="dropZone">Drag and drop files here</div>
+        <ul id="fileQueue"></ul>
+        <button type="button" id="startQueue">Start Queue</button>
+        <button type="button" id="clearQueue">Clear Queue</button>
+    </div>
+
+    <!-- Batch Results -->
+    <div class="form-group">
+        <h3>Batch Results</h3>
+        <p>There is an 8-second wait between file requests to avoid hitting the API rate limit.</p>
+        <div id="resultTabs"></div>
+        <label for="batchResponse">Response <span id="batchLoadingIndicator" style="font-weight: normal; color: #888;"></span></label>
+        <textarea id="batchResponse" rows="10" placeholder="Batch response appears here"></textarea>
+        <div class="counter">
+            <span>Characters: <span id="batchOutputCharCount">0</span></span>
+            <button type="button" id="copyBatchResponse">Copy</button>
+        </div>
+    </div>
 </div>
 
 <script>
-    // Set default prompt value.
-    const defaultPrompt = "You are a summarizer and keyword generator for technical documentation. The summaries should be about 150 characters, and the keywords should be about 3-6 relevant keywords. Generate three versions of each response, with different wording and length.\n\nUse the abbreviated form of any product names you see in the article.\n\nBlacklist of words you can't use: via, e.g., i.e., please, etc., latter\n\nReturn in this format:\ndescription: SUMMARY_GOES_HERE\nkeywords: [KEYWORD, KEYWORD, KEYWORD]";
+    // ------------------ Individual Request Code ------------------
+    const defaultPrompt = "You are a summarizer and keyword generator for technical documentation. The summaries should be about 150 characters, and the keywords should be about 3-6 relevant keywords. Generate three versions of each response, with different wording and length.\n\nUse the abbreviated form of any product names you see in the article.\n\nBlacklist of words you can't use: via, e.g., i.i., please, etc., latter\n\nReturn in this format:\ndescription: SUMMARY_GOES_HERE\nkeywords: [KEYWORD, KEYWORD, KEYWORD]";
     document.getElementById('prompt').value = defaultPrompt;
 
     // Preset buttons populate the prompt textarea.
-    const presetButtons = document.querySelectorAll('.preset-btn');
-    presetButtons.forEach(button => {
+    document.querySelectorAll('.preset-btn').forEach(button => {
       button.addEventListener('click', () => {
         const promptText = button.getAttribute('data-prompt');
         document.getElementById('prompt').value = promptText;
@@ -131,34 +197,178 @@
       });
     });
 
-    // Submit button event handler that calls the Gemini API.
+    // Submit button for single request.
     document.getElementById('submitBtn').addEventListener('click', async () => {
       console.log("Submit button clicked");
-
-      // Retrieve API key, system prompt, and article text.
       const apiKey = document.getElementById('apiKey').value.trim();
       if (!apiKey) {
-        console.error("API key is missing");
         alert("Please enter your API key.");
         return;
       }
-
       const systemInstruction = document.getElementById('prompt').value;
       const article = document.getElementById('article').value;
       if (!article) {
-        console.error("Article text is missing");
         alert("Please enter the article text.");
         return;
       }
 
-      // Prepare endpoint and payload per the Gemini API.
+      // Show loading message.
+      document.getElementById('loadingIndicator').textContent = "Request sent - waiting for response...";
+      const resultText = await callGeminiAPI(article);
+      document.getElementById('loadingIndicator').textContent = "";
+
+      const outputBox = document.getElementById('editableOutput');
+      outputBox.value = resultText;
+      document.getElementById('outputCharCount').textContent = resultText.length;
+    });
+
+    // ------------------ Batch Processing Code ------------------
+    let batchFiles = [];    // Array of { fileName, content }
+    let batchResults = [];  // Array of { fileName, result }
+
+    const dropZone = document.getElementById('dropZone');
+    const fileQueueUI = document.getElementById('fileQueue');
+    const resultTabs = document.getElementById('resultTabs');
+    const batchResponse = document.getElementById('batchResponse');
+    const batchOutputCharCount = document.getElementById('batchOutputCharCount');
+
+    // Drag & Drop event handlers.
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('hover');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('hover');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('hover');
+      const files = e.dataTransfer.files;
+      for (let i = 0; i < files.length; i++) {
+        readFile(files[i]);
+      }
+    });
+
+    // Read file content and add to queue.
+    function readFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        batchFiles.push({
+          fileName: file.name,
+          content: event.target.result
+        });
+        updateFileQueueUI();
+      };
+      reader.onerror = function() {
+        console.error("Error reading file:", file.name);
+      };
+      reader.readAsText(file);
+    }
+
+    // Update the displayed file queue.
+    function updateFileQueueUI() {
+      fileQueueUI.innerHTML = "";
+      batchFiles.forEach((f, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${index + 1}. ${f.fileName}`;
+        fileQueueUI.appendChild(li);
+      });
+    }
+
+    // Clear queue button.
+    document.getElementById('clearQueue').addEventListener('click', () => {
+      batchFiles = [];
+      batchResults = [];
+      updateFileQueueUI();
+      resultTabs.innerHTML = "";
+      batchResponse.value = "";
+      batchOutputCharCount.textContent = "0";
+      document.getElementById('batchLoadingIndicator').textContent = "";
+      console.log("Queue cleared.");
+    });
+
+    // Start queue button: process each file sequentially.
+    document.getElementById('startQueue').addEventListener('click', async () => {
+      if (batchFiles.length === 0) {
+        alert("No files in queue.");
+        return;
+      }
+      // Clear previous results.
+      batchResults = [];
+      resultTabs.innerHTML = "";
+      batchResponse.value = "";
+      batchOutputCharCount.textContent = "0";
+
+      for (let i = 0; i < batchFiles.length; i++) {
+        const fileObj = batchFiles[i];
+        console.log(`Processing file (${i + 1}/${batchFiles.length}): ${fileObj.fileName}`);
+        document.getElementById('batchLoadingIndicator').textContent = "Request sent - waiting for response...";
+        const resultText = await callGeminiAPI(fileObj.content);
+        batchResults.push({ fileName: fileObj.fileName, result: resultText });
+        addResultTab(fileObj.fileName, batchResults.length - 1);
+        document.getElementById('batchLoadingIndicator').textContent = "";
+        // Wait 8 seconds between requests, except after the last one.
+        if (i < batchFiles.length - 1) {
+          console.log("Waiting 8 seconds before next file...");
+          await new Promise(resolve => setTimeout(resolve, 8000));
+        }
+      }
+      // Auto-select the first result.
+      if (batchResults.length > 0) {
+        selectResultTab(0);
+      }
+    });
+
+    // Add a tab button for a file result.
+    function addResultTab(fileName, index) {
+      const btn = document.createElement('button');
+      btn.textContent = fileName;
+      btn.addEventListener('click', () => {
+        selectResultTab(index);
+      });
+      resultTabs.appendChild(btn);
+    }
+
+    // Display the result for the selected tab.
+    function selectResultTab(index) {
+      Array.from(resultTabs.children).forEach(btn => btn.classList.remove('active'));
+      resultTabs.children[index].classList.add('active');
+      const resultText = batchResults[index].result;
+      batchResponse.value = resultText;
+      batchOutputCharCount.textContent = resultText.length;
+    }
+
+    // Update character count for batchResponse in real time.
+    batchResponse.addEventListener('input', () => {
+      batchOutputCharCount.textContent = batchResponse.value.length;
+    });
+
+    // Copy button for batchResponse.
+    document.getElementById('copyBatchResponse').addEventListener('click', () => {
+      navigator.clipboard.writeText(batchResponse.value)
+        .then(() => {
+          console.log("Batch response copied to clipboard");
+        })
+        .catch(err => {
+          console.error("Error copying batch response:", err);
+        });
+    });
+
+    // ------------------ API Call Function ------------------
+    async function callGeminiAPI(articleText) {
+      const apiKey = document.getElementById('apiKey').value.trim();
+      if (!apiKey) {
+        alert("Please enter your API key.");
+        return "";
+      }
+      const systemInstruction = document.getElementById('prompt').value;
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
       const payload = {
         "contents": [
           {
             "role": "user",
             "parts": [
-              { "text": article }
+              { "text": articleText }
             ]
           }
         ],
@@ -176,59 +386,29 @@
           "responseMimeType": "text/plain"
         }
       };
-
-      // Log endpoint and payload details.
-      console.log("Endpoint:", endpoint);
-      console.log("Payload sent:", JSON.stringify(payload, null, 2));
-
+      console.log("API Call - Endpoint:", endpoint);
+      console.log("API Call - Payload:", JSON.stringify(payload, null, 2));
       try {
-        console.log("Sending request to Gemini API...");
         const response = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
         console.log("HTTP Response Status:", response.status);
         const data = await response.json();
         console.log("Full API Response JSON:", JSON.stringify(data, null, 2));
-
-        // Parse the output text from the API response.
         const resultText = (data.candidates && data.candidates[0] &&
           data.candidates[0].content &&
           data.candidates[0].content.parts &&
           data.candidates[0].content.parts[0] &&
           data.candidates[0].content.parts[0].text) || "No output returned";
-
-        // Set the response text in the editable output box.
-        const editableOutput = document.getElementById('editableOutput');
-        editableOutput.value = resultText;
-        document.getElementById('outputCharCount').textContent = resultText.length;
         console.log("API response text:", resultText);
+        return resultText;
       } catch (error) {
         console.error("Error during API call:", error);
-        alert("An error occurred while contacting the API. Check console for details.");
+        return "Error: " + error.toString();
       }
-    });
-
-    // Update character count in the Response box in real time.
-    const editableOutput = document.getElementById('editableOutput');
-    const outputCharCount = document.getElementById('outputCharCount');
-    editableOutput.addEventListener('input', () => {
-      outputCharCount.textContent = editableOutput.value.length;
-    });
-
-    // Copy button for the Response box.
-    document.getElementById('copyOutput').addEventListener('click', () => {
-      navigator.clipboard.writeText(editableOutput.value)
-        .then(() => {
-          console.log("Response copied to clipboard");
-        })
-        .catch(err => {
-          console.error("Error copying text:", err);
-        });
-    });
+    }
   </script>
 </body>
 </html>
