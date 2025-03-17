@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Markdown Find/Replace Utility</title>
+    <style>
+    /* Clean, minimal styling */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f9f9f9;
+    }
+    nav {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      margin: 0 10px;
+      text-decoration: none;
+      padding: 8px 12px;
+      background-color: #4285f4;
+      color: #fff;
+      border-radius: 4px;
+    }
+    nav a:hover {
+      background-color: #357ae8;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1, h2, h3 {
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    textarea {
+      resize: vertical;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4285f4;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 5px;
+    }
+    button:hover {
+      background-color: #357ae8;
+    }
+    .preset-btn {
+      margin-bottom: 5px;
+    }
+    .counter {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9em;
+      color: #555;
+      margin-top: 5px;
+    }
+    /* Styling for the drop zone */
+    #dropZone {
+      border: 2px dashed #ccc;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      margin-bottom: 10px;
+    }
+    #dropZone.hover {
+      background-color: #e8e8e8;
+    }
+    /* File queue list */
+    #fileQueue {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 10px;
+    }
+    #fileQueue li {
+      padding: 5px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 5px;
+    }
+    /* Tabs for batch results */
+    #resultTabs button {
+      margin: 3px;
+      padding: 5px 10px;
+      border: 1px solid #ccc;
+      background: #f0f0f0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #resultTabs button.active {
+      background: #4285f4;
+      color: #fff;
+    }
+
+    /* Additional styles for lined textareas */
+    .lined-textarea {
+      display: flex;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .line-numbers {
+      background: #eee;
+      padding: 10px;
+      text-align: right;
+      user-select: none;
+      font-family: monospace;
+      line-height: 1.2em;
+    }
+    .lined-textarea textarea {
+      border: none;
+      padding: 10px;
+      flex: 1;
+      resize: vertical;
+      font-family: inherit;
+      line-height: 1.2em;
+    }
+    /* Error and warning message styling */
+    #errorMessage {
+      color: red;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #linkWarning {
+      color: orange;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+<nav>
+    <a href="index.html">Gemini Frontend</a>
+    <a href="find-replace.html">Find & Replace Tool</a>
+</nav>
+<div class="container">
+    <h1>Find & Replace Tool</h1>
+    <p>Paste a Markdown text file into the "Input Markdown Text" field, then populate the "Find and Replace" boxes with what to find and what to replace, one operation per line. Check the Extracted Markdown Links at the bottom of this page to see which links exist on the input and output pages.</p>
+    <!-- Input Markdown Text -->
+    <div class="form-group">
+        <label for="inputText">Input Markdown</label>
+        <textarea id="inputText" rows="10" placeholder="Paste your markdown here..."></textarea>
+    </div>
+
+    <!-- Find and Replace Operations -->
+    <div class="form-group">
+        <h3>Find and Replace Operations</h3>
+        <!-- Error Message -->
+        <div id="errorMessage"></div>
+
+        <!-- Find Box -->
+        <label for="findBox">Find (one string per line)</label>
+        <div class="lined-textarea">
+            <div class="line-numbers" id="findLineNumbers">1</div>
+            <textarea id="findBox" rows="5" placeholder="Enter text to find..."></textarea>
+        </div>
+
+        <!-- Replace Box -->
+        <label for="replaceBox">Replace (corresponding one per line)</label>
+        <div class="lined-textarea">
+            <div class="line-numbers" id="replaceLineNumbers">1</div>
+            <textarea id="replaceBox" rows="5" placeholder="Enter replacement text..."></textarea>
+        </div>
+    </div>
+
+    <!-- Output Markdown Text -->
+    <div class="form-group">
+        <label for="outputText">Output Markdown</label>
+        <textarea id="outputText" rows="10" readonly placeholder="Result will appear here..."></textarea>
+    </div>
+
+    <!-- Extracted Markdown Links from Input -->
+    <div class="form-group">
+        <h3>Extracted Markdown Links (Input)</h3>
+        <div class="lined-textarea">
+            <div class="line-numbers" id="inputLinksNumbers">1</div>
+            <textarea id="inputLinksText" rows="5" readonly placeholder="Markdown links will appear here..."></textarea>
+        </div>
+    </div>
+
+    <!-- Extracted Markdown Links from Output -->
+    <div class="form-group">
+        <h3>Extracted Markdown Links (Output)</h3>
+        <div class="lined-textarea">
+            <div class="line-numbers" id="outputLinksNumbers">1</div>
+            <textarea id="outputLinksText" rows="5" readonly placeholder="Markdown links will appear here..."></textarea>
+        </div>
+        <div id="linkWarning"></div>
+    </div>
+</div>
+
+<script>
+    // Get references to DOM elements
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const findBox = document.getElementById('findBox');
+    const replaceBox = document.getElementById('replaceBox');
+    const errorMessage = document.getElementById('errorMessage');
+    const findLineNumbers = document.getElementById('findLineNumbers');
+    const replaceLineNumbers = document.getElementById('replaceLineNumbers');
+
+    // Link extraction elements
+    const inputLinksText = document.getElementById('inputLinksText');
+    const inputLinksNumbers = document.getElementById('inputLinksNumbers');
+    const outputLinksText = document.getElementById('outputLinksText');
+    const outputLinksNumbers = document.getElementById('outputLinksNumbers');
+    const linkWarning = document.getElementById('linkWarning');
+
+    // Function to update line numbers for a given textarea and its corresponding line number div
+    function updateLineNumbers(textarea, lineNumberDiv) {
+      const lines = textarea.value.split('\n');
+      let numbersHTML = '';
+      for (let i = 1; i <= lines.length; i++) {
+        numbersHTML += i + '<br>';
+      }
+      lineNumberDiv.innerHTML = numbersHTML;
+    }
+
+    // Function to extract Markdown links from text.
+    // This regex matches simple Markdown links of the form [text](url).
+    // Note: It might not capture all edge cases (e.g. nested brackets or parentheses in the URL).
+    function extractMarkdownLinks(text) {
+      const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+      let matches = [];
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        // match[0] is the full markdown link (e.g., [Example](http://example.com))
+        matches.push(match[0]);
+      }
+      return matches;
+    }
+
+    // Function to update the extracted links sections and check for discrepancies
+    function updateLinkSections() {
+      const inputLinks = extractMarkdownLinks(inputText.value);
+      const outputLinks = extractMarkdownLinks(outputText.value);
+
+      inputLinksText.value = inputLinks.join("\n");
+      outputLinksText.value = outputLinks.join("\n");
+
+      // Update line numbers for both link sections
+      updateLineNumbers(inputLinksText, inputLinksNumbers);
+      updateLineNumbers(outputLinksText, outputLinksNumbers);
+
+      // If the number of links in output differs from input, show a warning
+      if (inputLinks.length !== outputLinks.length) {
+        linkWarning.textContent = "Warning: The number of markdown links in the output does not match the input.";
+      } else {
+        linkWarning.textContent = "";
+      }
+    }
+
+    // Function to perform the find and replace operations
+    function updateOutput() {
+      let text = inputText.value;
+      const findLines = findBox.value.split('\n');
+      const replaceLines = replaceBox.value.split('\n');
+
+      // Check if the find and replace boxes have the same number of lines
+      if (findLines.length !== replaceLines.length) {
+        errorMessage.textContent = "Error: The number of find and replace lines must match.";
+        outputText.value = "";
+        updateLinkSections(); // Still update link sections from input
+        return;
+      } else {
+        errorMessage.textContent = "";
+      }
+
+      // Loop through each find/replace pair and perform the replacement
+      for (let i = 0; i < findLines.length; i++) {
+        const findStr = findLines[i];
+        const replaceStr = replaceLines[i];
+        if (findStr !== "") {
+          // Use split and join for global replacement of exact strings.
+          text = text.split(findStr).join(replaceStr);
+        }
+      }
+      // Update the output text area
+      outputText.value = text;
+      updateLinkSections();
+    }
+
+    // Event listeners for real-time updating
+    inputText.addEventListener('input', () => {
+      updateOutput();
+      updateLineNumbers(inputLinksText, inputLinksNumbers);
+    });
+    findBox.addEventListener('input', () => {
+      updateLineNumbers(findBox, findLineNumbers);
+      updateOutput();
+    });
+    replaceBox.addEventListener('input', () => {
+      updateLineNumbers(replaceBox, replaceLineNumbers);
+      updateOutput();
+    });
+
+    // Sync scroll of line numbers with textarea scroll for find/replace boxes
+    findBox.addEventListener('scroll', () => {
+      findLineNumbers.scrollTop = findBox.scrollTop;
+    });
+    replaceBox.addEventListener('scroll', () => {
+      replaceLineNumbers.scrollTop = replaceBox.scrollTop;
+    });
+
+    // Initialize on page load
+    window.addEventListener('load', () => {
+      updateLineNumbers(findBox, findLineNumbers);
+      updateLineNumbers(replaceBox, replaceLineNumbers);
+      updateOutput();
+    });
+  </script>
+</body>
+</html>
