@@ -206,7 +206,7 @@ tags: [TAG, TAG, TAG]">
 
 <script>
     // ------------------ Individual Request Code ------------------
-    const defaultPrompt = "You are a summarizer and keyword generator for technical documentation. The summaries should be about 150 characters, and the keywords should be about 3-6 relevant keywords. Generate three versions of each response, with different wording and length.\n\nUse the abbreviated form of any product names you see in the article.\n\nBlacklist of words you can't use: via, e.g., i.i., please, etc., latter\n\nReturn in this format:\ndescription: SUMMARY_GOES_HERE\nkeywords: [KEYWORD, KEYWORD, KEYWORD]";
+    const defaultPrompt = "You are a summarizer and tag generator for technical documentation. The summaries should be about 150 characters, and the tags should be about 3-6 relevant tags. Generate three versions of each response, with different wording and length.\n\nUse the abbreviated form of any product names you see in the article.\n\nBlacklist of words you can't use: Aerospike, via, e.g., i.e., please, etc., latter\n\nReturn in this format:\ndescription: SUMMARY_GOES_HERE\ntags: [TAG, TAG, TAG]";
     document.getElementById('prompt').value = defaultPrompt;
 
     // Preset buttons populate the prompt textarea.
