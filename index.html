@@ -10,6 +10,22 @@
       margin: 20px;
       background-color: #f9f9f9;
     }
+    nav {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    nav a {
+      display: inline-block;
+      margin: 0 10px;
+      text-decoration: none;
+      padding: 8px 12px;
+      background-color: #4285f4;
+      color: #fff;
+      border-radius: 4px;
+    }
+    nav a:hover {
+      background-color: #357ae8;
+    }
     .container {
       max-width: 900px;
       margin: auto;
@@ -103,9 +119,13 @@
   </style>
 </head>
 <body>
+<nav>
+    <a href="index.html">Gemini Frontend</a>
+    <a href="find-replace.html">Find & Replace Tool</a>
+</nav>
 <div class="container">
     <h1>Gemini Frontend</h1>
-
+    <p>Paste in a Google Gemini API key and edit the prompt to produce output based on your instructions to Gemini.</p>
     <!-- API Key Input -->
     <div class="form-group">
         <label for="apiKey">API Key</label>
@@ -117,15 +137,15 @@
         <label for="prompt">System Prompt</label>
         <div id="promptPresets">
             <!-- Default Summarize prompt -->
-            <button type="button" class="preset-btn" data-prompt="You are a summarizer and keyword generator for technical documentation. The summaries should be about 150 characters, and the keywords should be about 3-6 relevant keywords. Generate three versions of each response, with different wording and length.
+            <button type="button" class="preset-btn" data-prompt="You are a summarizer and tag generator for technical documentation. The summaries should be about 150 characters, and the tags should be about 3-6 relevant tags. Generate three versions of each response, with different wording and length.
 
 Use the abbreviated form of any product names you see in the article.
 
-Blacklist of words you can't use: via, e.g., i.e., please, etc., latter
+Blacklist of words you can't use: Aerospike via, e.g., i.e., please, etc., latter
 
 Return in this format:
 description: SUMMARY_GOES_HERE
-keywords: [KEYWORD, KEYWORD, KEYWORD]">
+tags: [TAG, TAG, TAG]">
                 Summarize
             </button>
             <!-- Additional preset buttons -->
@@ -163,6 +183,7 @@ keywords: [KEYWORD, KEYWORD, KEYWORD]">
     <!-- Batch Processing Section -->
     <div class="form-group">
         <h2>Batch Processing</h2>
+        <p>Drag and drop one or more Markdown files here to perform the same Gemini query on each one.</p>
         <div id="dropZone">Drag and drop files here</div>
         <ul id="fileQueue"></ul>
         <button type="button" id="startQueue">Start Queue</button>
